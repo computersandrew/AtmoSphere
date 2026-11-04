@@ -1,6 +1,8 @@
-# Weather Globe
+# AtmoSphere
 
-A 3D globe built with three.js that streams satellite or OpenStreetMap tiles. This is the base for a 3D weather visualizer: cloud decks by altitude, convection towers, wind particles and NOAA forecasts drawn above the surface.
+Tired of looking at 2D weather? I am. For activities which require a high level of situational awareness, 3D representation has long held multiple advantages over 2D, the most significant of which is to perceive depth and height.  I myself am a private pilot, so I'd thought I'd share this tool with you guys.
+
+Here is 3D globe built with three.js that can use streams from satellites or OpenStreetMap tiles. This is the fundamental base for a 3D weather visualizer: cloud decks by altitude, convection towers, wind particles and NOAA forecasts drawn above the surface.
 
 ## Run it
 
@@ -15,11 +17,11 @@ Pushing to `main` deploys to GitHub Pages using `.github/workflows/deploy.yml`. 
 ## Base layers
 
 | Layer | Source | Max zoom | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | NASA Blue Marble | NASA GIBS | 8 | Cloud-free composite |
 | NASA VIIRS True Color | NASA GIBS (NOAA-20) | 9 | One image per day, with real clouds; pick the date in the panel |
 | Esri World Imagery | Esri | 18 | High resolution, zooms to street level |
-| OpenStreetMap | OSM | 19 | Follow the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/); switch to a paid OSM tile host if traffic grows |
+| OpenStreetMap | OSM | 19 | See [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) |
 
 On satellite layers you can also turn on an optional borders-and-places overlay (Esri Reference).
 
@@ -27,17 +29,17 @@ On satellite layers you can also turn on an optional borders-and-places overlay 
 
 Turn on **Weather layers → Current clouds** to show live clouds in 3D above the globe.
 
-- **Data:** infrared (~10.8 µm) images from geostationary weather satellites.
+- **Data:** infrared (\~10.8 µm) images from geostationary weather satellites.
   - GOES-East, GOES-West and Himawari come from NASA GIBS. They update every 10 minutes and are calibrated to °C using the GIBS colormap.
   - Europe, Africa and the Indian Ocean (Meteosat) are filled in from EUMETSAT's 3-hourly multi-satellite IR ring. Its grey levels aren't calibrated, so the app works out a grey→°C mapping on each load from the areas where both sources overlap.
 - **Height:** cloud-top height is estimated from how much colder the cloud top is than the expected surface temperature, using a standard lapse rate of 6.5 °C/km. Cold, high tops become tall towers and warm, low cloud stays thin. Very low cloud and cold winter ground are the weak spots of this method.
-- **Rendering:** 16 transparent shells between 0.3 and 16 km. Each one draws only where the cloud column reaches it. Use the slider to set the height exaggeration (default 20×). The cloud layer refreshes every 10 minutes.
+- **Rendering:** 23 transparent shells between 0.25 and 16 km. Each one draws only where the cloud column reaches it. Use the slider to set the height exaggeration (default 20×). The cloud layer refreshes every 10 minutes.
 
 ## US clouds: HRRR + METAR
 
-Over the contiguous US the clouds come from a weather model, not an estimate. That gives them real tops, bases and stacked layers.
+Over the contiguous US the clouds come from a weather model from the NOAA(Bless Them). That gives us real tops and bases infomation.
 
-- **HRRR** is NOAA's 3 km model and runs every hour. Each run, `pipeline/build_clouds.py` downloads only the cloud water, cloud ice, snow and geopotential height fields on 37 pressure levels from NOAA's AWS bucket, using the `.idx` byte ranges (~40 MB per hour of forecast instead of ~400 MB). It then:
+- **HRRR** is NOAA's 3 km model and runs every hour. Each run, `pipeline/build_clouds.py` downloads only the cloud water, cloud ice, snow and geopotential height fields on 37 pressure levels from NOAA's AWS bucket, using the `.idx` byte ranges (\~40 MB per hour of forecast instead of \~400 MB). It then:
   1. regrids them to a 0.1° lat/lon grid,
   2. converts condensate to cloudiness and interpolates to 23 fixed heights (0.25–16 km above sea level),
   3. writes one PNG atlas per forecast hour (0–12 h).
@@ -76,6 +78,7 @@ The current view is saved in the URL hash, so you can share links to specific vi
 ```
 src/
   main.js                 renderer, UI, URL state, render loop
+  units.js                metric / imperial formatting
   globe/
     geo.js                lon/lat ↔ xyz, Web Mercator tile math (units: km)
     TileGlobe.js          quadtree LOD tile streaming
@@ -92,7 +95,6 @@ src/
 pipeline/
   build_clouds.py         HRRR + METAR → cloud volume (runs hourly in GitHub Actions)
   tests/make_fixtures.py  fake HRRR GRIB + METAR files for offline testing
-  units.js                metric / imperial formatting
 ```
 
 - **Units and frame:** 1 unit = 1 km. Earth's radius is 6371 and it sits at the origin, with +Y pointing to the north pole. Weather layers can use `lonLatToVec3(lon, lat, EARTH_RADIUS + altitudeKm × exaggeration)`.
@@ -102,7 +104,7 @@ pipeline/
 
 ## Roadmap
 
-1. GFS data pipeline: a GitHub Action every 6 h downloads selected fields from NOAA GFS (AWS Open Data) using `herbie`, saves them as compact PNG/binary grids and publishes them with the site.
+1. GFS data pipeline: a GitHub Action every 6 h downloads selected fields from NOAA GFS (AWS Open Data), saves them as compact PNG grids and publishes them with the site.
 2. Surface temperature and precipitation heatmap, plus a forecast-hour slider.
 3. Wind particles at 10 m, 850 hPa and 250 hPa.
 4. ~~3D clouds~~ (done: satellite IR worldwide, HRRR + METAR over the US); next, GFS for global forecast clouds.
